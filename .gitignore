@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 
 CLAUDE.md
-
+docs
 # C extensions
 *.so
 
