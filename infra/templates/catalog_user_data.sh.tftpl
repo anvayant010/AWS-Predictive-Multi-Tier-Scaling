@@ -1,0 +1,43 @@
+#!/bin/bash
+set -euo pipefail
+
+exec >> /var/log/catalog-service-setup.log 2>&1
+
+dnf install -y python3-pip
+
+mkdir -p /opt/catalog_service/demo_app/catalog_service
+
+cat <<'PYEOF' > /opt/catalog_service/demo_app/__init__.py
+PYEOF
+
+cat <<'PYEOF' > /opt/catalog_service/demo_app/catalog_service/__init__.py
+PYEOF
+
+cat <<'PYEOF' > /opt/catalog_service/demo_app/catalog_service/data.py
+${data_py_content}
+PYEOF
+
+cat <<'PYEOF' > /opt/catalog_service/demo_app/catalog_service/main.py
+${main_py_content}
+PYEOF
+
+pip3 install --no-input fastapi uvicorn pydantic
+
+cat <<UNITEOF > /etc/systemd/system/catalog-service.service
+[Unit]
+Description=catalog_service (FastAPI)
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/catalog_service
+ExecStart=/usr/bin/python3 -m uvicorn demo_app.catalog_service.main:app --host 0.0.0.0 --port ${port}
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+UNITEOF
+
+systemctl daemon-reload
+systemctl enable catalog-service
+systemctl start catalog-service
