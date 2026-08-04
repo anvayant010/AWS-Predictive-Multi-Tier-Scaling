@@ -232,6 +232,8 @@ override.tf.json
 .terraform.tfstate.lock.info
 *.tfvars
 !*.tfvars.example
+tfplan
+*.tfplan
 
 # Node / dashboard
 node_modules/
