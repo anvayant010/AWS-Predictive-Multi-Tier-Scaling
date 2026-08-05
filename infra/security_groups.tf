@@ -1,6 +1,6 @@
 resource "aws_security_group" "catalog_alb" {
   name        = "${var.project_name}-catalog-alb"
-  description = "catalog_service ALB: internet -> HTTP"
+  description = "catalog_service ALB: internet to HTTP"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
@@ -21,7 +21,7 @@ resource "aws_security_group" "catalog_alb" {
 
 resource "aws_security_group" "catalog_instance" {
   name        = "${var.project_name}-catalog-instance"
-  description = "catalog_service EC2 instances: ALB -> uvicorn port only"
+  description = "catalog_service EC2 instances: ALB to uvicorn port only"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {

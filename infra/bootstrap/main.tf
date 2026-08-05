@@ -161,7 +161,9 @@ data "aws_iam_policy_document" "compute" {
       "elasticloadbalancing:CreateTargetGroup",
       "elasticloadbalancing:DeleteTargetGroup",
       "elasticloadbalancing:ModifyTargetGroup",
+      "elasticloadbalancing:ModifyTargetGroupAttributes",
       "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetGroupAttributes",
       "elasticloadbalancing:RegisterTargets",
       "elasticloadbalancing:DeregisterTargets",
       "elasticloadbalancing:DescribeTargetHealth",
@@ -184,6 +186,7 @@ data "aws_iam_policy_document" "compute" {
       "lambda:DeleteFunction",
       "lambda:GetFunction",
       "lambda:GetFunctionConfiguration",
+      "lambda:GetFunctionCodeSigningConfig",
       "lambda:ListFunctions",
       "lambda:ListVersionsByFunction",
       "lambda:PublishVersion",
@@ -205,8 +208,11 @@ data "aws_iam_policy_document" "compute" {
   }
 
   statement {
-    sid       = "ApiGateway"
-    actions   = ["apigateway:GET", "apigateway:POST", "apigateway:PUT", "apigateway:DELETE", "apigateway:PATCH"]
+    sid = "ApiGateway"
+    actions = [
+      "apigateway:GET", "apigateway:POST", "apigateway:PUT", "apigateway:DELETE", "apigateway:PATCH",
+      "apigateway:TagResource", "apigateway:UntagResource",
+    ]
     resources = ["arn:${local.partition}:apigateway:${var.aws_region}::/*"]
   }
 
