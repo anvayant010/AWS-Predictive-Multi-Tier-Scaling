@@ -113,6 +113,7 @@ data "aws_iam_policy_document" "compute" {
     sid = "Ec2ReadAndLifecycle"
     actions = [
       "ec2:Describe*",
+      "ec2:GetSecurityGroupsForVpc",
       "ec2:RunInstances",
       "ec2:TerminateInstances",
       "ec2:CreateTags",
@@ -158,6 +159,8 @@ data "aws_iam_policy_document" "compute" {
       "elasticloadbalancing:CreateLoadBalancer",
       "elasticloadbalancing:DeleteLoadBalancer",
       "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:ModifyLoadBalancerAttributes",
+      "elasticloadbalancing:DescribeLoadBalancerAttributes",
       "elasticloadbalancing:CreateTargetGroup",
       "elasticloadbalancing:DeleteTargetGroup",
       "elasticloadbalancing:ModifyTargetGroup",
@@ -199,6 +202,7 @@ data "aws_iam_policy_document" "compute" {
       "lambda:DeleteProvisionedConcurrencyConfig",
       "lambda:AddPermission",
       "lambda:RemovePermission",
+      "lambda:GetPolicy",
       "lambda:TagResource",
       "lambda:UntagResource",
     ]
@@ -353,6 +357,20 @@ data "aws_iam_policy_document" "iam_role_management" {
     ]
     resources = [
       "arn:${local.partition}:iam::${local.account_id}:instance-profile/${var.project_name}-*",
+    ]
+  }
+
+  statement {
+    # One-time per-account bootstrapping: ALB and ASG each need their AWS
+    # service-linked role to exist before they can create their first
+    # resource. Scoped to the two fixed, well-known role ARNs AWS uses for
+    # these services (not a project-name pattern, since these roles are
+    # account-wide and service-defined, not created by us).
+    sid     = "CreateServiceLinkedRolesForComputeServices"
+    actions = ["iam:CreateServiceLinkedRole"]
+    resources = [
+      "arn:${local.partition}:iam::${local.account_id}:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing",
+      "arn:${local.partition}:iam::${local.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
     ]
   }
 }
