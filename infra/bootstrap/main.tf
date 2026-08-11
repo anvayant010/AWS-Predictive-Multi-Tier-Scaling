@@ -174,6 +174,7 @@ data "aws_iam_policy_document" "compute" {
       "elasticloadbalancing:DeleteListener",
       "elasticloadbalancing:ModifyListener",
       "elasticloadbalancing:DescribeListeners",
+      "elasticloadbalancing:DescribeListenerAttributes",
       "elasticloadbalancing:AddTags",
       "elasticloadbalancing:DescribeTags",
     ]
@@ -339,6 +340,7 @@ data "aws_iam_policy_document" "iam_role_management" {
       "iam:DetachRolePolicy",
       "iam:ListRolePolicies",
       "iam:ListAttachedRolePolicies",
+      "iam:ListInstanceProfilesForRole",
       "iam:PassRole",
     ]
     resources = [
