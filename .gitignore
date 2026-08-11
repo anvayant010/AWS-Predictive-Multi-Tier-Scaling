@@ -242,3 +242,4 @@ dashboard/dist/
 
 # AWS
 .aws-sam/
+personal.txt
