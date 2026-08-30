@@ -3,7 +3,7 @@ set -euo pipefail
 
 exec >> /var/log/catalog-service-setup.log 2>&1
 
-dnf install -y python3-pip
+dnf install -y python3.11 python3.11-pip
 
 mkdir -p /opt/catalog_service/demo_app/catalog_service
 
@@ -21,7 +21,7 @@ cat <<'PYEOF' > /opt/catalog_service/demo_app/catalog_service/main.py
 ${main_py_content}
 PYEOF
 
-pip3 install --no-input fastapi uvicorn pydantic
+/usr/bin/python3.11 -m pip install --no-input fastapi uvicorn pydantic
 
 cat <<UNITEOF > /etc/systemd/system/catalog-service.service
 [Unit]
@@ -30,7 +30,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=/opt/catalog_service
-ExecStart=/usr/bin/python3 -m uvicorn demo_app.catalog_service.main:app --host 0.0.0.0 --port ${port}
+ExecStart=/usr/bin/python3.11 -m uvicorn demo_app.catalog_service.main:app --host 0.0.0.0 --port ${port}
 Restart=always
 User=root
 
