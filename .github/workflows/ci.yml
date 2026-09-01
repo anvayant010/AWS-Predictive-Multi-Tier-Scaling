@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest tests/ -v
+
+  terraform:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dir: [infra, infra/bootstrap]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: terraform fmt -check
+        run: terraform -chdir=${{ matrix.dir }} fmt -check
+
+      # -backend=false: no AWS credentials in CI, so skip touching the real
+      # S3/DynamoDB backend entirely — this only needs provider plugins.
+      - name: terraform init (no backend)
+        run: terraform -chdir=${{ matrix.dir }} init -backend=false
+
+      - name: terraform validate
+        run: terraform -chdir=${{ matrix.dir }} validate
