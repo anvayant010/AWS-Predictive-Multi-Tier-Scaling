@@ -6,6 +6,7 @@ from forecasting.data_pipeline.synthetic_data import (
     build_burst_schedule,
     catalog_request_count,
     catalog_target_response_time,
+    choose_ramping_bursts,
     generate_metrics,
     run,
     thumbnail_concurrent_executions,
@@ -81,6 +82,66 @@ def test_thumbnail_invocations_higher_inside_burst_window() -> None:
     outside = thumbnail_invocations(50.0, schedule, baseline=2.0, noise_std=0, rng=rng)
 
     assert inside > outside
+
+
+def test_choose_ramping_bursts_is_empty_when_disabled_and_draws_nothing() -> None:
+    rng = random.Random(0)
+    state_before = rng.getstate()
+    schedule = [(1000.0, 1100.0, 300.0), (9000.0, 9100.0, 300.0)]
+
+    assert choose_ramping_bursts(schedule, ramp_fraction=0.0, ramp_seconds=240, rng=rng) == frozenset()
+    assert rng.getstate() == state_before
+
+
+def test_choose_ramping_bursts_skips_ramps_that_would_overlap_previous_burst() -> None:
+    rng = random.Random(0)
+    # Second burst starts 100s after the first ends, but a ramp needs 240s of room.
+    schedule = [(1000.0, 1100.0, 300.0), (1200.0, 1300.0, 300.0)]
+
+    chosen = choose_ramping_bursts(schedule, ramp_fraction=1.0, ramp_seconds=240, rng=rng)
+
+    assert chosen == frozenset({0})
+
+
+def test_thumbnail_invocations_climbs_before_a_ramping_burst() -> None:
+    rng = random.Random(0)
+    schedule = [(1000.0, 1100.0, 300.0)]
+    kwargs = dict(
+        baseline=2.0, noise_std=0, rng=rng, ramping=frozenset({0}), ramp_seconds=240.0, ramp_peak_fraction=0.25
+    )
+
+    before_ramp = thumbnail_invocations(700.0, schedule, **kwargs)
+    early_ramp = thumbnail_invocations(800.0, schedule, **kwargs)
+    late_ramp = thumbnail_invocations(990.0, schedule, **kwargs)
+    in_burst = thumbnail_invocations(1050.0, schedule, **kwargs)
+
+    assert before_ramp == 2.0
+    assert before_ramp < early_ramp < late_ramp < in_burst
+    assert late_ramp < 0.25 * 300.0 + 1  # ramp tops out near the configured fraction of peak
+
+
+def test_thumbnail_invocations_does_not_ramp_unlisted_bursts() -> None:
+    rng = random.Random(0)
+    schedule = [(1000.0, 1100.0, 300.0)]
+
+    value = thumbnail_invocations(990.0, schedule, baseline=2.0, noise_std=0, rng=rng, ramp_seconds=240.0)
+
+    assert value == 2.0
+
+
+def test_generate_metrics_ramp_raises_invocations_just_before_bursts() -> None:
+    start = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    kwargs = dict(days=14, interval_seconds=60, seed=3, thumbnail_noise_std=0.0)
+
+    off = generate_metrics(start, **kwargs)
+    on = generate_metrics(start, thumbnail_ramp_fraction=1.0, **kwargs)
+
+    def invocations(rows: list) -> list[float]:
+        return [r[3] for r in rows if r[2] == "Invocations"]
+
+    # Same burst schedule, so ramps can only ever add traffic, and must add some.
+    assert all(a >= b for a, b in zip(invocations(on), invocations(off)))
+    assert sum(invocations(on)) > sum(invocations(off))
 
 
 def test_thumbnail_concurrent_executions_scales_with_invocations_and_duration() -> None:

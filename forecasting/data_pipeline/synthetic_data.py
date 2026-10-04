@@ -85,6 +85,27 @@ def build_burst_schedule(
     return schedule
 
 
+def choose_ramping_bursts(
+    schedule: BurstSchedule,
+    *,
+    ramp_fraction: float,
+    ramp_seconds: float,
+    rng: random.Random,
+) -> frozenset[int]:
+    """Pick which bursts get a lead-up ramp. Draws from rng only when ramps are enabled, so
+    the default (off) leaves existing seeded output unchanged."""
+    if ramp_fraction <= 0 or ramp_seconds <= 0:
+        return frozenset()
+    chosen: set[int] = set()
+    previous_end = 0.0
+    for i, (start, end, _peak) in enumerate(schedule):
+        # A ramp must not run into the previous burst, or it would blur two events together.
+        if rng.random() < ramp_fraction and start - ramp_seconds >= previous_end:
+            chosen.add(i)
+        previous_end = end
+    return frozenset(chosen)
+
+
 def thumbnail_invocations(
     elapsed_seconds: float,
     schedule: BurstSchedule,
@@ -92,10 +113,19 @@ def thumbnail_invocations(
     baseline: float,
     noise_std: float,
     rng: random.Random,
+    ramping: frozenset[int] = frozenset(),
+    ramp_seconds: float = 0.0,
+    ramp_peak_fraction: float = 0.25,
 ) -> float:
     for start, end, peak in schedule:
         if start <= elapsed_seconds < end:
             return max(0.0, peak + rng.gauss(0, noise_std))
+    for i in ramping:
+        start, _end, peak = schedule[i]
+        if start - ramp_seconds <= elapsed_seconds < start:
+            progress = (elapsed_seconds - (start - ramp_seconds)) / ramp_seconds
+            level = baseline + (ramp_peak_fraction * peak - baseline) * progress
+            return max(0.0, level + rng.gauss(0, noise_std * 0.2))
     return max(0.0, baseline + rng.gauss(0, noise_std * 0.2))
 
 
@@ -125,6 +155,9 @@ def generate_metrics(
     thumbnail_gap_max_minutes: float = 240.0,
     thumbnail_noise_std: float = 3.0,
     thumbnail_avg_duration_seconds: float = 0.1,
+    thumbnail_ramp_fraction: float = 0.0,
+    thumbnail_ramp_minutes: float = 4.0,
+    thumbnail_ramp_peak_fraction: float = 0.25,
 ) -> list[MetricRow]:
     rng = random.Random(seed)
     total_seconds = days * SECONDS_PER_DAY
@@ -137,6 +170,10 @@ def generate_metrics(
         gap_min_minutes=thumbnail_gap_min_minutes,
         gap_max_minutes=thumbnail_gap_max_minutes,
         rng=rng,
+    )
+    ramp_seconds = thumbnail_ramp_minutes * 60
+    ramping = choose_ramping_bursts(
+        schedule, ramp_fraction=thumbnail_ramp_fraction, ramp_seconds=ramp_seconds, rng=rng
     )
 
     rows: list[MetricRow] = []
@@ -169,6 +206,9 @@ def generate_metrics(
             baseline=thumbnail_baseline_invocations,
             noise_std=thumbnail_noise_std,
             rng=rng,
+            ramping=ramping,
+            ramp_seconds=ramp_seconds,
+            ramp_peak_fraction=thumbnail_ramp_peak_fraction,
         )
         concurrent = thumbnail_concurrent_executions(
             invocations, avg_duration_seconds=thumbnail_avg_duration_seconds
@@ -182,8 +222,15 @@ def generate_metrics(
     return rows
 
 
-def run(conn: Connection, start: datetime, days: int, interval_seconds: int = 60, seed: int | None = None) -> int:
-    rows = generate_metrics(start, days, interval_seconds, seed=seed)
+def run(
+    conn: Connection,
+    start: datetime,
+    days: int,
+    interval_seconds: int = 60,
+    seed: int | None = None,
+    **generate_kwargs: float,
+) -> int:
+    rows = generate_metrics(start, days, interval_seconds, seed=seed, **generate_kwargs)
     return write_metrics(conn, rows)
 
 
@@ -194,5 +241,13 @@ if __name__ == "__main__":
     _seed = int(_seed_env) if _seed_env else None
     _end = datetime.now(timezone.utc)
     _start = _end - timedelta(days=_days)
-    written = run(get_connection(), _start, _days, _interval_seconds, seed=_seed)
+    written = run(
+        get_connection(),
+        _start,
+        _days,
+        _interval_seconds,
+        seed=_seed,
+        thumbnail_ramp_fraction=float(os.environ.get("SYNTHETIC_RAMP_FRACTION", "0")),
+        thumbnail_ramp_minutes=float(os.environ.get("SYNTHETIC_RAMP_MINUTES", "4")),
+    )
     print(f"wrote {written} rows")
