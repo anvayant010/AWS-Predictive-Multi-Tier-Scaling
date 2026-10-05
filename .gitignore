@@ -243,3 +243,4 @@ dashboard/dist/
 # AWS
 .aws-sam/
 personal.txt
+dry_run_output
