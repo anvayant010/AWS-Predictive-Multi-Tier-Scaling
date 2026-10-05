@@ -14,5 +14,5 @@ prophet>=1.1
 scikit-learn>=1.4
 httpx>=0.27
 pytest>=8.0
-moto>=5.0
+moto[apigatewayv2]>=5.0
 black>=24.0
