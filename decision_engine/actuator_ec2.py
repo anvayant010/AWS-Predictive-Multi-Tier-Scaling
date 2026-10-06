@@ -37,6 +37,11 @@ def _describe_group(autoscaling, asg_name: str) -> dict:
     return groups[0]
 
 
+def current_desired_capacity(autoscaling, asg_name: str) -> int:
+    """The group's current desired capacity, read from AWS (read-only)."""
+    return int(_describe_group(autoscaling, asg_name)["DesiredCapacity"])
+
+
 def scale_ec2(
     autoscaling,
     asg_name: str,
