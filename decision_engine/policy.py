@@ -19,8 +19,9 @@ from dataclasses import dataclass
 from decision_engine.models import Aggressiveness, Forecast, LoadShape, ScalingDecision
 
 # Absolute ceilings. A config with a larger max is rejected, so raising these is a deliberate,
-# reviewed code change. EC2 matches the Terraform ASG max_size; Lambda matches this AWS account's
-# total concurrent-execution quota (10), which provisioned concurrency counts against.
+# reviewed code change. EC2 matches the Terraform ASG max_size. Lambda's 10 is now a deliberate
+# cost/safety cap, not a quota limit: the account's concurrency quota was raised to 1000 (2026-10-06),
+# and provisioned concurrency can use up to (quota - 100) of it. Raise only on purpose.
 ABSOLUTE_MAX_INSTANCES = 10
 ABSOLUTE_MAX_LAMBDA_CONCURRENCY = 10
 
