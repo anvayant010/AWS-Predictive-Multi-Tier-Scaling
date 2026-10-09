@@ -79,6 +79,17 @@ class LambdaPolicyConfig:
     # vs. 20 it cut provisioned minutes ~43% on the untouched test week for ~4 points of coverage.
     # Tuned on synthetic data only; revisit with real traffic.
     provision_threshold_per_min: float = 35.0
+    # Hysteresis: once provisioned concurrency is already on (current > 0), keep it on until the forecast
+    # falls below THIS lower threshold instead of the provisioning one. Stops a forecast that hovers
+    # around the trigger from switching capacity on and off every few minutes. None = same as the
+    # provisioning threshold, i.e. no hysteresis.
+    release_threshold_per_min: float | None = None
+
+    @property
+    def effective_release_threshold(self) -> float:
+        if self.release_threshold_per_min is None:
+            return self.provision_threshold_per_min
+        return self.release_threshold_per_min
 
     def __post_init__(self) -> None:
         if self.avg_duration_seconds <= 0:
@@ -91,6 +102,10 @@ class LambdaPolicyConfig:
             )
         if self.lookahead_minutes < 1 or self.provision_threshold_per_min < 0:
             raise ValueError("lookahead_minutes must be >= 1 and the threshold non-negative")
+        if self.release_threshold_per_min is not None and not (
+            0 <= self.release_threshold_per_min <= self.provision_threshold_per_min
+        ):
+            raise ValueError("release_threshold_per_min must be between 0 and provision_threshold_per_min")
 
 
 def _clamp(value: int, low: int, high: int) -> int:
@@ -148,12 +163,19 @@ def lambda_provisioned_concurrency(
     config: LambdaPolicyConfig = LambdaPolicyConfig(),
     aggressiveness: Aggressiveness = Aggressiveness.BALANCED,
 ) -> ScalingDecision:
-    """desired = ceil(peak invocations/min / 60 * avg duration * safety factor), 0 if quiet."""
+    """desired = ceil(peak invocations/min / 60 * avg duration * safety factor), 0 if quiet.
+
+    "Quiet" has hysteresis: to switch provisioning ON the peak must reach the provisioning threshold, but
+    once it is already on (current_concurrency > 0) it stays on until the peak drops below the lower
+    release threshold.
+    """
     profile = PROFILES[aggressiveness]
     window = forecast.quantile(profile.quantile)[: config.lookahead_minutes]
     peak = max(window)
 
-    if peak < config.provision_threshold_per_min:
+    already_on = current_concurrency > 0
+    threshold = config.effective_release_threshold if already_on else config.provision_threshold_per_min
+    if peak < threshold:
         needed = 0
     else:
         needed = math.ceil(peak / 60.0 * config.avg_duration_seconds * profile.lambda_multiplier)
@@ -170,6 +192,7 @@ def lambda_provisioned_concurrency(
         demand=peak,
         reason=(
             f"{profile.quantile} peak {peak:.1f} inv/min over next {len(window)} min "
-            f"(threshold {config.provision_threshold_per_min:g}), x{profile.lambda_multiplier:g} safety"
+            f"(threshold {threshold:g}{' to stay on' if already_on and threshold != config.provision_threshold_per_min else ''}), "
+            f"x{profile.lambda_multiplier:g} safety"
         ),
     )

@@ -34,7 +34,14 @@ class Route:
 
 ROUTES: dict[str, Route] = {
     "catalog_service": Route(classifier=CATALOG_CLASSIFIER, ec2=Ec2PolicyConfig()),
-    "thumbnail_service": Route(classifier=THUMBNAIL_CLASSIFIER, lambda_=LambdaPolicyConfig()),
+    # release_threshold_per_min=15 chosen on a validation week by a pre-committed rule
+    # (decision_engine/tune_hysteresis.py). The effect is small: on the untouched test week ~12% fewer
+    # create cycles (50 -> 45/day), coverage 88.3% -> 89.1%, cost ratio +4%. Most churn comes from the
+    # forecaster's false alarms (88% of trigger switch-ons are not followed by real load), which no
+    # threshold can remove. Tuned on synthetic data only.
+    "thumbnail_service": Route(
+        classifier=THUMBNAIL_CLASSIFIER, lambda_=LambdaPolicyConfig(release_threshold_per_min=15.0)
+    ),
 }
 
 
