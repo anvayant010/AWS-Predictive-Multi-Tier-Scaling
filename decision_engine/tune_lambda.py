@@ -40,7 +40,11 @@ SENSITIVITY_TRUTH_THRESHOLD = 50.0
 def route_with_threshold(threshold: float) -> Route:
     base = ROUTES[SERVICE]
     assert base.lambda_ is not None
-    return replace(base, lambda_=replace(base.lambda_, provision_threshold_per_min=threshold))
+    # Hysteresis is switched OFF here (release=None) so the provisioning threshold is tuned on its own and
+    # these results stay reproducible; the release threshold was tuned afterwards (tune_hysteresis.py).
+    return replace(
+        base, lambda_=replace(base.lambda_, provision_threshold_per_min=threshold, release_threshold_per_min=None)
+    )
 
 
 def evaluate_threshold(decisions: pd.DataFrame, route: Route, truth_threshold: float) -> dict[str, float]:
