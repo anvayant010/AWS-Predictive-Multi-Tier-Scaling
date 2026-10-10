@@ -17,15 +17,17 @@ Env: HOLDOUT_DAYS (default 7), DRY_RUN_OUTPUT (default dry_run_output/dry_run_de
 
 from __future__ import annotations
 
-import math
 import os
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from decision_engine.classifier import classify
+from decision_engine.damping import DEFAULT_DAMPING, DampingConfig, DampingState, damp
 from decision_engine.engine import ROUTES, Route, decide
+from decision_engine.grading import LAMBDA_TRUTH_THRESHOLD, needed_capacity  # noqa: F401  (re-exported)
 from decision_engine.models import Aggressiveness, Forecast, LoadShape
 from forecasting.data_pipeline.db import get_connection
 from forecasting.predictor import GbmForecaster
@@ -33,10 +35,6 @@ from forecasting.train import TARGET_SERIES, load_series, split_train_holdout
 
 FORECAST_STEPS = 15
 CADENCE_MINUTES = {"catalog_service": 5, "thumbnail_service": 1}
-# Traffic level (invocations/min) at which provisioned concurrency counts as "needed" when grading
-# Lambda decisions. Matches the original policy trigger so results stay comparable with the first
-# dry-run; held fixed so tuning the policy threshold can't move the goalposts.
-LAMBDA_TRUTH_THRESHOLD = 20.0
 
 
 def future_windows(series: pd.Series, origins: pd.DatetimeIndex, steps: int) -> np.ndarray:
@@ -54,37 +52,18 @@ def actual_forecast(service: str, origin: pd.Timestamp, window: np.ndarray) -> F
     return Forecast(service, origin.to_pydatetime(), values, values, values)
 
 
-def _clamp(value: int, low: int, high: int) -> int:
-    return max(low, min(high, value))
-
-
-def needed_capacity(
-    route: Route, actual_peak: float, *, truth_threshold: float = LAMBDA_TRUTH_THRESHOLD
-) -> int:
-    """Capacity the real peak required: no safety margin, no multiplier, but within the same caps.
-
-    For Lambda, `truth_threshold` is the traffic level at which provisioned concurrency is judged
-    worthwhile. It is deliberately independent of the policy's own trigger
-    (`provision_threshold_per_min`): if the ground truth moved with the threshold being tuned, every
-    threshold would grade itself on its own terms and look better than it is.
-    """
-    if route.ec2 is not None:
-        cfg = route.ec2
-        return _clamp(math.ceil(actual_peak / cfg.capacity_per_instance_rpm), cfg.min_instances, cfg.max_instances)
-    assert route.lambda_ is not None
-    cfg_l = route.lambda_
-    if actual_peak < truth_threshold:
-        return _clamp(0, cfg_l.min_concurrency, cfg_l.max_concurrency)
-    return _clamp(
-        math.ceil(actual_peak / 60.0 * cfg_l.avg_duration_seconds), cfg_l.min_concurrency, cfg_l.max_concurrency
-    )
-
-
 def _floor_and_lookahead(route: Route) -> tuple[int, int]:
     if route.ec2 is not None:
         return route.ec2.min_instances, route.ec2.lookahead_minutes
     assert route.lambda_ is not None
     return route.lambda_.min_concurrency, route.lambda_.lookahead_minutes
+
+
+def _capacity_caps(route: Route) -> tuple[int, int]:
+    if route.ec2 is not None:
+        return route.ec2.min_instances, route.ec2.max_instances
+    assert route.lambda_ is not None
+    return route.lambda_.min_concurrency, route.lambda_.max_concurrency
 
 
 def replay(
@@ -94,18 +73,29 @@ def replay(
     aggressiveness: Aggressiveness,
     *,
     truth_threshold: float = LAMBDA_TRUTH_THRESHOLD,
+    damping: DampingConfig | None = None,
 ) -> pd.DataFrame:
-    """Run every forecast through classify+policy in time order, tracking simulated capacity."""
+    """Run every forecast through classify+policy in time order, tracking simulated capacity.
+
+    With `damping`, releases of capacity are held exactly as the live loop would hold them
+    (decision_engine.damping); `proposed` records what the policy asked for before damping.
+    """
     origins = pd.DatetimeIndex([pd.Timestamp(f.origin) for f in forecasts])
     windows = future_windows(series, origins, FORECAST_STEPS)
     floor, lookahead = _floor_and_lookahead(route)
 
+    low, high = _capacity_caps(route)
+    dstate = DampingState()
     current = floor
     rows = []
     for forecast, window in zip(forecasts, windows):
         # Use the route we were given (not the global table) so alternative configs can be replayed.
         decision = decide(forecast, current, aggressiveness, routes={forecast.service: route})
         scaling, cls = decision.scaling, decision.classification
+        proposed = scaling.desired
+        if damping is not None:
+            damped = damp(proposed, current, forecast.origin, dstate, damping, min_capacity=low, max_capacity=high)
+            scaling = replace(scaling, desired=damped.desired)
         actual_peak = float(window[:lookahead].max())
         needed = needed_capacity(route, actual_peak, truth_threshold=truth_threshold)
         actual_shape = classify(actual_forecast(forecast.service, pd.Timestamp(forecast.origin), window), route.classifier)
@@ -119,6 +109,7 @@ def replay(
                 "forecast_demand": scaling.demand,
                 "actual_peak": actual_peak,
                 "current": current,
+                "proposed": proposed,
                 "desired": scaling.desired,
                 "uncapped": scaling.uncapped,
                 "cap_applied": scaling.cap_applied,
@@ -156,6 +147,38 @@ def summarize(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(out)
 
 
+def churn_stats(df: pd.DataFrame) -> pd.DataFrame:
+    """How much capacity flaps: changes, direction reversals, and (Lambda) create/delete cycles."""
+    out = []
+    for (service, aggr), g in df.groupby(["service", "aggressiveness"], sort=False):
+        step = g["desired"].diff().fillna(0)
+        direction = step.apply(lambda x: 0 if x == 0 else (1 if x > 0 else -1))
+        previous = direction.where(direction != 0).ffill().shift()
+        reversals = int(((direction != 0) & previous.notna() & (direction != previous)).sum())
+        on = (g["desired"] > 0).astype(int)
+        creates = int(((on == 1) & (on.shift(fill_value=0) == 0)).sum())
+        runs, run = [], 0
+        for v in on:
+            if v:
+                run += 1
+            elif run:
+                runs.append(run)
+                run = 0
+        if run:
+            runs.append(run)
+        out.append(
+            {
+                "service": service,
+                "aggressiveness": aggr,
+                "changes": int((step != 0).sum()),
+                "reversals": reversals,
+                "creates": creates,
+                "median_on_run": float(pd.Series(runs).median()) if runs else 0.0,
+            }
+        )
+    return pd.DataFrame(out)
+
+
 def format_summary(summary: pd.DataFrame) -> str:
     # (column, header, width, value format)
     cols = [
@@ -183,7 +206,7 @@ def format_summary(summary: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-def run(conn, holdout_days: int = 7) -> pd.DataFrame:
+def run(conn, holdout_days: int = 7, damping: dict[str, DampingConfig] | None = None) -> pd.DataFrame:
     frames = []
     for service, metric in TARGET_SERIES.items():
         series = load_series(conn, service, metric)
@@ -196,7 +219,7 @@ def run(conn, holdout_days: int = 7) -> pd.DataFrame:
         origins = holdout_origins[:: CADENCE_MINUTES[service]]
         forecasts = forecaster.forecast_many(series, origins)
         for aggressiveness in Aggressiveness:
-            frames.append(replay(series, forecasts, ROUTES[service], aggressiveness))
+            frames.append(replay(series, forecasts, ROUTES[service], aggressiveness, damping=(damping or {}).get(service)))
     return pd.concat(frames, ignore_index=True)
 
 
@@ -207,3 +230,11 @@ if __name__ == "__main__":
     decisions.to_csv(output, index=False)
     print(f"wrote {len(decisions)} decisions to {output} (dry run: nothing was sent to AWS)")
     print(format_summary(summarize(decisions)))
+    print("\nWITH DAMPING (decision_engine.damping.DEFAULT_DAMPING):")
+    damped = run(get_connection(), int(os.environ.get("HOLDOUT_DAYS", "7")), damping=DEFAULT_DAMPING)
+    print(format_summary(summarize(damped)))
+    print("\nCHURN, undamped vs damped (balanced):")
+    for label, frame in (("undamped", decisions), ("damped  ", damped)):
+        stats = churn_stats(frame[frame["aggressiveness"] == "balanced"])
+        for _, r in stats.iterrows():
+            print(f"  {label} {r['service']:<18} changes={r['changes']:>4} reversals={r['reversals']:>4} creates={r['creates']:>4} median on-run={r['median_on_run']:.0f} min")
