@@ -76,3 +76,17 @@ def test_every_route_respects_its_caps_for_an_absurd_forecast() -> None:
         route = ROUTES[service]
         limit = route.ec2.max_instances if route.ec2 else route.lambda_.max_concurrency
         assert decision.scaling.desired == limit
+
+
+def test_the_thumbnail_route_carries_the_tuned_trigger_and_release_thresholds() -> None:
+    assert ROUTES["thumbnail_service"].lambda_.release_threshold_per_min == 15.0
+    assert ROUTES["thumbnail_service"].lambda_.provision_threshold_per_min == 35.0
+
+
+def test_hysteresis_keeps_a_provisioned_lambda_on_through_a_dip_that_would_not_switch_it_on() -> None:
+    dip = [25.0] * 15  # between the release (15) and provisioning (35) thresholds
+
+    switching_on = decide(forecast("thumbnail_service", dip), current=0)
+    staying_on = decide(forecast("thumbnail_service", dip), current=1)
+
+    assert switching_on.scaling.desired == 0 and staying_on.scaling.desired >= 1

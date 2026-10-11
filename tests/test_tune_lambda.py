@@ -132,3 +132,9 @@ def test_sweep_keeps_needed_fixed_and_provisions_less_as_the_threshold_rises() -
 
 def test_tuning_code_never_references_aws() -> None:
     assert "boto3" not in Path(tune.__file__).read_text()
+
+
+def test_the_provisioning_threshold_is_tuned_without_hysteresis_so_results_stay_reproducible() -> None:
+    # ROUTES now carries a tuned release threshold; the threshold sweep must not inherit it.
+    assert ROUTES["thumbnail_service"].lambda_.release_threshold_per_min is not None
+    assert route_with_threshold(50).lambda_.release_threshold_per_min is None

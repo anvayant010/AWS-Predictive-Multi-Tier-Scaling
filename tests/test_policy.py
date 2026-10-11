@@ -296,3 +296,75 @@ def test_ec2_caps_hold_for_every_shape() -> None:
             shape=rng.choice(list(LoadShape)),
         )
         assert config.min_instances <= decision.desired <= config.max_instances
+
+
+# --- Lambda trigger hysteresis: on at the provisioning threshold, off only below the release threshold ---
+
+
+HYSTERESIS = LambdaPolicyConfig(provision_threshold_per_min=35.0, release_threshold_per_min=20.0)
+
+
+def lambda_desired(peak: float, current: int, config: LambdaPolicyConfig = HYSTERESIS) -> int:
+    return lambda_provisioned_concurrency(make_forecast([peak] * 3, p50=[peak] * 3), current, config).desired
+
+
+def test_it_switches_on_only_at_the_provisioning_threshold() -> None:
+    assert lambda_desired(25.0, current=0) == 0  # between the two thresholds: not switched on
+    assert lambda_desired(40.0, current=0) >= 1
+
+
+def test_once_on_it_stays_on_until_the_forecast_drops_below_the_release_threshold() -> None:
+    assert lambda_desired(25.0, current=1) >= 1  # same peak that would not switch it on keeps it on
+    assert lambda_desired(20.0, current=1) >= 1  # the release threshold itself still counts as on
+    assert lambda_desired(19.9, current=1) == 0
+
+
+def test_the_same_peak_gives_different_answers_depending_on_whether_it_is_already_on() -> None:
+    assert lambda_desired(25.0, current=0) != lambda_desired(25.0, current=1)
+
+
+def test_no_release_threshold_means_no_hysteresis() -> None:
+    plain = LambdaPolicyConfig(provision_threshold_per_min=35.0)
+
+    assert plain.release_threshold_per_min is None and plain.effective_release_threshold == 35.0
+    assert lambda_desired(25.0, current=1, config=plain) == 0  # the pre-hysteresis behaviour
+
+
+def test_sizing_above_the_provisioning_threshold_does_not_depend_on_current_state() -> None:
+    assert lambda_desired(600.0, current=0) == lambda_desired(600.0, current=3)
+
+
+def test_the_decision_reason_says_when_the_lower_threshold_applied() -> None:
+    forecast = make_forecast([25.0] * 3, p50=[25.0] * 3)
+
+    staying = lambda_provisioned_concurrency(forecast, 1, HYSTERESIS)
+    starting = lambda_provisioned_concurrency(forecast, 0, HYSTERESIS)
+
+    assert "to stay on" in staying.reason and "threshold 20" in staying.reason
+    assert "to stay on" not in starting.reason and "threshold 35" in starting.reason
+
+
+@pytest.mark.parametrize("release", [-1.0, 35.1, 100.0])
+def test_a_release_threshold_outside_zero_to_provision_is_rejected(release: float) -> None:
+    with pytest.raises(ValueError, match="release_threshold_per_min"):
+        LambdaPolicyConfig(provision_threshold_per_min=35.0, release_threshold_per_min=release)
+
+
+@pytest.mark.parametrize("release", [0.0, 20.0, 35.0])
+def test_a_release_threshold_within_range_is_accepted(release: float) -> None:
+    assert LambdaPolicyConfig(provision_threshold_per_min=35.0, release_threshold_per_min=release).effective_release_threshold == release
+
+
+def test_caps_still_hold_with_hysteresis_for_any_forecast_and_state() -> None:
+    rng = random.Random(21)
+    for _ in range(400):
+        provision = rng.uniform(1, 100)
+        config = LambdaPolicyConfig(
+            provision_threshold_per_min=provision,
+            release_threshold_per_min=rng.choice([None, rng.uniform(0, provision)]),
+            avg_duration_seconds=rng.uniform(0.01, 5),
+            max_concurrency=rng.randint(1, ABSOLUTE_MAX_LAMBDA_CONCURRENCY),
+        )
+        peak = rng.choice([0.0, rng.uniform(0, 1e7)])
+        decision = lambda_provisioned_concurrency(make_forecast([peak] * 5), rng.randint(0, 12), config, rng.choice(list(Aggressiveness)))
+        assert config.min_concurrency <= decision.desired <= config.max_concurrency

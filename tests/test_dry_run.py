@@ -7,7 +7,9 @@ import pytest
 
 import decision_engine.dry_run as dry_run
 import decision_engine.engine as engine
+from decision_engine.damping import DEFAULT_DAMPING, DampingConfig
 from decision_engine.dry_run import (
+    churn_stats,
     format_summary,
     future_windows,
     needed_capacity,
@@ -126,6 +128,71 @@ def test_ec2_replay_applies_gradual_scale_down_across_steps() -> None:
     desired = list(df["desired"])
     assert desired[0] == 6  # ceil(300 / 50)
     assert desired[1:] == [5, 4, 3]  # at most one instance released per decision
+
+
+# --- damping in the replay -----------------------------------------------------------------------------
+
+
+def test_replay_with_damping_holds_a_release_and_records_the_proposal() -> None:
+    series = flat_series([2.0] * 400)
+    route = ROUTES["thumbnail_service"]
+    forecasts = [forecast_at(series, 100, "thumbnail_service", 600.0), forecast_at(series, 103, "thumbnail_service", 2.0)]
+
+    plain = replay(series, forecasts, route, Aggressiveness.BALANCED)
+    damped = replay(series, forecasts, route, Aggressiveness.BALANCED, damping=DampingConfig(hold_minutes=10))
+
+    assert list(plain["desired"]) == [2, 0]  # without damping capacity is dropped 3 minutes after being raised
+    assert list(damped["proposed"]) == [2, 0]  # the policy's ask is unchanged...
+    assert list(damped["desired"]) == [2, 2]  # ...but the release is held
+    assert list(damped["current"]) == [0, 2]
+
+
+def test_replay_without_damping_is_unchanged_so_earlier_results_stay_comparable() -> None:
+    series = flat_series([2.0] * 300)
+    forecasts = [forecast_at(series, i, "thumbnail_service", level) for i, level in [(100, 600.0), (110, 2.0)]]
+    route = ROUTES["thumbnail_service"]
+
+    plain = replay(series, forecasts, route, Aggressiveness.BALANCED)
+
+    assert list(plain["desired"]) == list(plain["proposed"])
+
+
+def test_damping_reduces_create_delete_cycles_in_a_flickering_replay() -> None:
+    series = flat_series([2.0] * 400)
+    route = ROUTES["thumbnail_service"]
+    forecasts = [forecast_at(series, 100 + i, "thumbnail_service", 600.0 if i % 2 == 0 else 2.0) for i in range(120)]
+
+    plain = churn_stats(replay(series, forecasts, route, Aggressiveness.BALANCED)).iloc[0]
+    damped = churn_stats(replay(series, forecasts, route, Aggressiveness.BALANCED, damping=DEFAULT_DAMPING["thumbnail_service"])).iloc[0]
+
+    assert plain["creates"] >= 50
+    assert damped["creates"] <= plain["creates"] / 4
+    assert damped["median_on_run"] > plain["median_on_run"]
+
+
+def test_churn_stats_counts_changes_reversals_and_create_delete_cycles() -> None:
+    df = pd.DataFrame(
+        {
+            "service": "thumbnail_service",
+            "aggressiveness": "balanced",
+            "desired": [0, 1, 0, 1, 1, 0],
+        }
+    )
+
+    stats = churn_stats(df).iloc[0]
+
+    assert stats["changes"] == 4  # 0>1, 1>0, 0>1, 1>0 (the repeated 1 is not a change)
+    assert stats["reversals"] == 3  # up, down, up, down: three direction changes
+    assert stats["creates"] == 2
+    assert stats["median_on_run"] == 1.5  # on-runs of 1 and 2 minutes
+
+
+def test_churn_stats_for_a_steady_series_is_all_zero() -> None:
+    df = pd.DataFrame({"service": "catalog_service", "aggressiveness": "balanced", "desired": [3, 3, 3, 3]})
+
+    stats = churn_stats(df).iloc[0]
+
+    assert (stats["changes"], stats["reversals"]) == (0, 0)
 
 
 # --- end to end (real GBM fit on a small generated dataset, no DB, no AWS) ----------------------
