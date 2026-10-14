@@ -239,8 +239,11 @@ tfplan
 node_modules/
 dashboard/build/
 dashboard/dist/
+loop_output
 
 # AWS
 .aws-sam/
 personal.txt
 dry_run_output
+# Phase 7 calibration raw data (regenerable, large)
+calibration_output/
