@@ -40,6 +40,7 @@ from decision_engine.grading import LAMBDA_TRUTH_THRESHOLD
 TEST_DAYS = 7  # same held-out week as decision_engine.tune_lambda.split_points
 MINUTE = pd.Timedelta(minutes=1)
 ABSOLUTE_MAX_INSTANCES = 10  # the project-wide hard cap
+ABSOLUTE_MAX_LAMBDA_CONCURRENCY = 10  # the project-wide provisioned-concurrency cap
 
 THUMBNAIL = "thumbnail_service"
 CATALOG = "catalog_service"
@@ -54,6 +55,11 @@ class ThumbnailParams:
 
     n_bursts: int
     gap_minutes: int
+    # Load scaling. At the recorded volumes (<= 400 invocations/min) a 52 ms handler needs well under ONE container
+    # (400/60 x 0.052 = 0.35), so every arm would see ~1 cold start per burst and provisioned concurrency could not
+    # matter. The load is therefore scaled so the loudest selected burst needs `target_peak_concurrency` containers.
+    target_peak_concurrency: float
+    billed_seconds: float  # measured billed handler duration (calibration)
     lead_minutes: int = 10  # the planted ramp is 4 minutes; 10 keeps all of it plus some quiet before
     tail_minutes: int = 5
     burst_threshold: float = LAMBDA_TRUTH_THRESHOLD
@@ -65,6 +71,10 @@ class ThumbnailParams:
             raise ValueError("n_bursts must be at least 1")
         if self.gap_minutes < 1:
             raise ValueError("gap_minutes must be at least 1")
+        if not 0 < self.target_peak_concurrency <= ABSOLUTE_MAX_LAMBDA_CONCURRENCY:
+            raise ValueError(f"target_peak_concurrency must be in (0, {ABSOLUTE_MAX_LAMBDA_CONCURRENCY}] (the provisioned-concurrency cap)")
+        if not self.billed_seconds > 0:
+            raise ValueError("billed_seconds must be positive")
         if self.lead_minutes < 0 or self.tail_minutes < 0 or self.merge_gap_minutes < 0:
             raise ValueError("lead/tail/merge minutes cannot be negative")
         if self.history_days < 1:
@@ -138,6 +148,12 @@ class ServiceScenario:
         if self.capacity_rpm_per_instance is None or self.utilization is None:
             return None
         return self.capacity_rpm_per_instance * self.utilization / self.load_scale
+
+    @property
+    def natural_duration_seconds(self) -> float | None:
+        """avg_duration_seconds to give the predictive Lambda policy (it works in natural units): billed duration x load_scale."""
+        billed = self.params.get("billed_seconds")
+        return None if billed is None else billed * self.load_scale
 
     @property
     def static_peak_instances(self) -> int | None:
@@ -286,13 +302,18 @@ def build_thumbnail_scenario(series: pd.Series, params: ThumbnailParams) -> Serv
             )
         )
 
+    loudest = max(e.peak for e in episodes)
+    if loudest <= 0:
+        raise ValueError("the selected bursts carry no traffic")
+    load_scale = params.target_peak_concurrency * 60.0 / (params.billed_seconds * loudest)
+
     history = series.loc[test_start - pd.Timedelta(days=params.history_days) : test_start - MINUTE]
     return ServiceScenario(
         service=THUMBNAIL,
         history=history,
         series=scenario,
         train_cutoff=test_start,
-        load_scale=1.0,
+        load_scale=load_scale,
         episodes=tuple(episodes),
         params=asdict(params),
     )

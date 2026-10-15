@@ -62,7 +62,7 @@ PRICES = Prices()
 @dataclass(frozen=True)
 class LambdaShape:
     memory_mb: int = 128  # infra/variables.tf default
-    billed_ms_per_request: float = 100.0  # ASSUMED handler duration (policy.py uses 0.1 s); replace with a measurement
+    billed_ms_per_request: float = 52.0  # MEASURED 2026-10-15: median billed duration of warm calls at 128 MB (REPORT lines)
 
     def __post_init__(self) -> None:
         if self.memory_mb <= 0 or self.billed_ms_per_request < 0:
