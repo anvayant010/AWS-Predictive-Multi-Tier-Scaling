@@ -247,3 +247,5 @@ personal.txt
 dry_run_output
 # Phase 7 calibration raw data (regenerable, large)
 calibration_output/
+# Phase 7 replay comparison output (regenerable)
+replay_output/
