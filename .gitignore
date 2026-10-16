@@ -249,3 +249,6 @@ dry_run_output
 calibration_output/
 # Phase 7 replay comparison output (regenerable)
 replay_output/
+# Dashboard: disposable design mock and generated data (regenerate with: python -m scripts.export_dashboard_data)
+dashboard/mock/
+dashboard/public/data/
