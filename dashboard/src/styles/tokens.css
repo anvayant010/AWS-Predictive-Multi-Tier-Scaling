@@ -1,0 +1,40 @@
+/* Every colour is a role. Light and dark swap here and nowhere else.
+   Accent pairs were checked with the dataviz palette validator (adjacent CVD ΔE ≈ 11, lightness band, contrast). */
+:root {
+  color-scheme: dark;
+  --bg: #0b1020; /* ink navy */
+  --bg-raise: #10172e; /* a slightly lifted plane: used only for the "measured on AWS" band */
+  --ink: #eef1f8;
+  --ink-2: #a9b1c9;
+  --ink-3: #727b99;
+  --grid: #1a2240;
+  --axis: #2a3358;
+  --predictive: #1ca384;
+  --reactive: #e4683a;
+  --oracle: #8b94b3;
+  --actual: #eef1f8;
+  --aws: #f0b24a; /* reserved: marks what was measured on real AWS */
+  --warn: #fab219; /* status colours always travel with an icon or label */
+  --crit: #d03b3b;
+  --on-fill: #0b1020; /* text on a solid accent fill */
+
+  --font: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f3ec; /* warm paper */
+  --bg-raise: #efe9dc;
+  --ink: #14172b;
+  --ink-2: #4b5068;
+  --ink-3: #82869b;
+  --grid: #e3ddcf;
+  --axis: #c9c2b0;
+  --predictive: #0b9c7c;
+  --reactive: #d9622b;
+  --oracle: #7a7f93;
+  --actual: #14172b;
+  --aws: #a86a00;
+  --on-fill: #f6f3ec;
+}

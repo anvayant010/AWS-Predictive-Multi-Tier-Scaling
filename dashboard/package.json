@@ -1,0 +1,29 @@
+{
+  "name": "predictive-scaling-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Replay dashboard for the Predictive Multi-Tier Scaling Engine (reads data exported by scripts/export_dashboard_data.py)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fontsource/geist-mono": "^5.2.5",
+    "@fontsource/instrument-sans": "^5.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^3.10.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~5.6.3",
+    "vite": "^6.0.7",
+    "vitest": "^3.2.7"
+  }
+}
