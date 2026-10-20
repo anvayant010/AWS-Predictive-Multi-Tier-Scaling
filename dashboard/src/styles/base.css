@@ -38,9 +38,9 @@ button {
   font-family: var(--mono);
 }
 .wrap {
-  max-width: 1240px;
+  max-width: 1840px;
   margin: 0 auto;
-  padding: 0 clamp(16px, 4vw, 48px);
+  padding: 0 clamp(16px, 4.5vw, 88px);
 }
 
 /* ---------- top bar ---------- */
@@ -115,8 +115,8 @@ button {
 }
 .row {
   display: grid;
-  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
-  gap: clamp(20px, 4vw, 56px);
+  grid-template-columns: minmax(0, clamp(220px, 17vw, 300px)) minmax(0, 1fr);
+  gap: clamp(20px, 4vw, 72px);
 }
 @media (max-width: 900px) {
   .row {
@@ -163,6 +163,28 @@ button {
   font-size: clamp(16px, 1.5vw, 19px);
   max-width: 56ch;
   margin-top: 26px;
+}
+/* On wide screens the headline sits left and the result sits right, so neither half of the page is empty. */
+@media (min-width: 1100px) {
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    column-gap: clamp(40px, 6vw, 120px);
+    align-items: end;
+  }
+  .hero .hero-figs {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    margin-top: 0;
+    padding-bottom: 6px;
+  }
+  .hero h1 {
+    max-width: 16ch;
+    font-size: clamp(48px, 4.9vw, 92px);
+  }
+  .hero .big {
+    font-size: clamp(110px, 11vw, 200px);
+  }
 }
 .hero-figs {
   display: flex;

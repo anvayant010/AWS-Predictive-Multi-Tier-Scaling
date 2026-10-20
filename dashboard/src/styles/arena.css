@@ -1,0 +1,385 @@
+/* Section 01: the live simulation. */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- scenario switch ---------- */
+.switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.switch button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  background: none;
+  border: 1px solid var(--axis);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 14.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.switch button small {
+  font: 500 10.5px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.switch button:hover {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+.switch button[aria-pressed="true"] {
+  color: var(--ink);
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.watching {
+  margin-top: 16px;
+  max-width: 80ch;
+  color: var(--ink-2);
+  font-size: 15.5px;
+}
+
+/* ---------- legend ---------- */
+.legend {
+  list-style: none;
+  padding: 0;
+  margin: 22px 0 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.key.fan {
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--predictive) 24%, transparent);
+  border-top: 2px dotted var(--predictive);
+}
+.key.wait {
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ink-2) 28%, transparent);
+}
+.dotkey {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink-2);
+  box-shadow: 0 0 0 2px var(--bg);
+  outline: 1px solid var(--axis);
+}
+
+/* ---------- chart ---------- */
+.arena-chart {
+  height: clamp(250px, 30vw, 520px);
+  width: 100%;
+  user-select: none;
+}
+.arena-chart .recharts-wrapper:focus,
+.arena-chart svg:focus {
+  outline: none;
+}
+.tip {
+  background: var(--bg-raise);
+  border: 1px solid var(--axis);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  min-width: 170px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.tip-time {
+  font: 500 12px var(--mono);
+  color: var(--ink-3);
+  margin-bottom: 6px;
+}
+.tip-row {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink-2);
+  padding: 2px 0;
+}
+.tip-row b {
+  font: 500 12.5px var(--mono);
+  color: var(--ink);
+}
+.tip-key {
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+}
+.tip-unit {
+  margin-top: 6px;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+/* ---------- fault strips ---------- */
+.strips {
+  margin-top: 6px;
+}
+.strips-head {
+  margin: 14px 0 6px;
+}
+.strip {
+  margin-bottom: 10px;
+}
+.strip-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+}
+.strip-line b {
+  font: 500 13px var(--mono);
+  color: var(--ink);
+}
+.strip-noun {
+  color: var(--ink-3);
+}
+.strip-track {
+  position: relative;
+  height: 22px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+.strip-bar {
+  position: absolute;
+  bottom: 0;
+  border-radius: 2px 2px 0 0;
+  min-width: 3px;
+}
+.strip-bar.warn {
+  background: var(--warn);
+}
+.strip-bar.cold {
+  background: var(--crit);
+}
+.strip-bar.severe {
+  background: var(--crit);
+}
+
+/* ---------- player dock ---------- */
+.dock {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--axis);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-raise) 70%, transparent);
+}
+.dock-play {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 50%;
+  border: none;
+  background: var(--ink);
+  color: var(--bg);
+  cursor: pointer;
+}
+.dock-play:hover {
+  background: var(--predictive);
+  color: var(--on-fill);
+}
+.dock-clock {
+  flex: none;
+  min-width: 48px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.dock-scrub {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+.dock-scrub input[type="range"] {
+  --fill: 0%;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.dock-scrub input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--ink-2) var(--fill), var(--axis) var(--fill));
+}
+.dock-scrub input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--ink-2) var(--fill), var(--axis) var(--fill));
+}
+.dock-scrub input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--bg);
+}
+.dock-scrub input[type="range"]::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--bg);
+}
+.dock-mark {
+  position: absolute;
+  top: -3px;
+  width: 0;
+  pointer-events: none;
+}
+.dock-mark i {
+  position: absolute;
+  left: -1px;
+  width: 2px;
+  height: 7px;
+  border-radius: 1px;
+  background: var(--reactive);
+}
+.dock-speed {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.dock-speed button {
+  font: 500 12px var(--mono);
+  padding: 5px 9px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.dock-speed button[aria-pressed="true"] {
+  background: var(--bg);
+  color: var(--ink);
+}
+@media (max-width: 560px) {
+  .dock {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .dock-scrub {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+/* ---------- margin readout ---------- */
+.readout {
+  margin-top: 26px;
+  display: grid;
+  gap: 12px;
+  font-size: 12.5px;
+}
+.readout dt {
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.readout dd {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 14px;
+}
+@media (max-width: 900px) {
+  .readout {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+
+/* ---------- context, caption, table ---------- */
+.context {
+  margin-top: 20px;
+  max-width: 78ch;
+  color: var(--ink-2);
+  font-size: 14.5px;
+}
+.context b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.caption {
+  margin-top: 14px;
+  max-width: 78ch;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.tableview {
+  margin-top: 16px;
+  font-size: 13px;
+}
+.tableview summary {
+  cursor: pointer;
+  color: var(--ink-2);
+}
+.tablewrap {
+  margin-top: 10px;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--grid);
+  border-radius: 10px;
+}
+.tablewrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 400 12px var(--mono);
+}
+.tablewrap th,
+.tablewrap td {
+  text-align: right;
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--grid);
+  color: var(--ink-2);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.tablewrap thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  color: var(--ink-3);
+}
+.tablewrap tbody th {
+  text-align: left;
+  color: var(--ink);
+}

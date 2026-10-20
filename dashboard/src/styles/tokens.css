@@ -36,5 +36,7 @@
   --oracle: #7a7f93;
   --actual: #14172b;
   --aws: #a86a00;
+  --warn: #b87500;
+  --crit: #c23030;
   --on-fill: #f6f3ec;
 }

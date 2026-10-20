@@ -1,4 +1,5 @@
-import { AwsPlaceholder, ComparisonPlaceholder, EpisodesPlaceholder } from "./components/Placeholders";
+import { Arena } from "./components/Arena";
+import { AwsPlaceholder, ComparisonPlaceholder } from "./components/Placeholders";
 import { Footer } from "./components/Footer";
 import { Hero } from "./components/Hero";
 import { Section } from "./components/Section";
@@ -28,14 +29,7 @@ export default function App() {
         {state.status === "ready" && (
           <>
             <Hero comparison={state.data.comparison} />
-            <Section
-              id="watch"
-              kicker="01 · Live simulation"
-              title="Watch it decide"
-              note="The same surge hits two systems. One reads a forecast, the other reacts to what it already sees. Press play."
-            >
-              <EpisodesPlaceholder data={state.data} />
-            </Section>
+            <Arena data={state.data} />
             <Section
               id="versus"
               kicker="02 · Comparison"
