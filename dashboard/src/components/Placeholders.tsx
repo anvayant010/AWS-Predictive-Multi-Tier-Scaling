@@ -1,37 +1,7 @@
 import type { DashboardData } from "../data/types";
 import { formatInt } from "../lib/format";
 
-/** Temporary panels so each section shows that its data loaded. Replaced by the real sections in D3-D5. */
-
-export function EpisodesPlaceholder({ data }: { data: DashboardData }) {
-  return (
-    <div className="placeholder">
-      <h3>Recorded episodes loaded · simulation arrives in D3</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>episode</th>
-            <th>minutes</th>
-            <th>approaches</th>
-            <th>peak traffic</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.episodes.map((ep) => (
-            <tr key={ep.id}>
-              <td>{ep.title}</td>
-              <td>{ep.minutes}</td>
-              <td>{Object.keys(ep.arms).length}</td>
-              <td>
-                {formatInt(Math.max(...ep.traffic))} {ep.kind === "ec2" ? "req/min" : "inv/min"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+/** Temporary panels so each section shows that its data loaded. Replaced by the real sections in D4-D5. */
 
 export function ComparisonPlaceholder({ data }: { data: DashboardData }) {
   const run = data.comparison?.["0.7"];
