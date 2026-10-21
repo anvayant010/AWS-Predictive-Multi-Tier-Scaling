@@ -190,7 +190,11 @@
   padding: 10px 14px;
   border: 1px solid var(--axis);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--bg-raise) 70%, transparent);
+  background: color-mix(in srgb, var(--bg-raise) 90%, transparent);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  bottom: 14px;
+  z-index: 6;
 }
 .dock-play {
   display: grid;
@@ -381,5 +385,301 @@
 }
 .tablewrap tbody th {
   text-align: left;
+  color: var(--ink);
+}
+
+/* ---------- how to read this ---------- */
+.howto {
+  margin-top: 22px;
+  max-width: 110ch;
+  padding: 16px 0 4px;
+  border-top: 1px solid var(--grid);
+}
+.howto-tier {
+  margin: 0 0 12px;
+  color: var(--ink-2);
+  font-size: 14.5px;
+  max-width: 82ch;
+}
+.howto-tier b {
+  color: var(--ink);
+}
+.howto-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+.howto-steps li {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 10px;
+  padding: 2px 22px 12px 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.howto-steps li + li {
+  padding-left: 22px;
+  border-left: 1px solid var(--grid);
+}
+.howto-steps b {
+  color: var(--ink);
+}
+.howto-steps b.mint {
+  color: var(--predictive);
+}
+.howto-steps b.ember {
+  color: var(--reactive);
+}
+.howto-n {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--axis);
+  font: 500 11.5px var(--mono);
+  color: var(--ink-2);
+}
+@media (max-width: 860px) {
+  .howto-steps {
+    grid-template-columns: 1fr;
+  }
+  .howto-steps li,
+  .howto-steps li + li {
+    padding: 4px 0 10px;
+    border-left: none;
+  }
+}
+
+/* ---------- hover definitions ---------- */
+.term {
+  position: relative;
+  border-bottom: 1px dotted var(--ink-3);
+  color: var(--ink);
+  cursor: help;
+}
+.term::after {
+  content: attr(data-def);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 30;
+  width: max-content;
+  max-width: min(300px, 78vw);
+  padding: 9px 12px;
+  border: 1px solid var(--axis);
+  border-radius: 10px;
+  background: var(--bg-raise);
+  color: var(--ink-2);
+  font: 400 12.5px/1.45 var(--font);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(3px);
+  transition: opacity 0.14s, transform 0.14s;
+}
+.term:hover::after,
+.term:focus::after {
+  opacity: 1;
+  transform: none;
+}
+.term:focus {
+  outline: 2px solid var(--ink-3);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ---------- lanes ---------- */
+.lanes-wrap {
+  margin-top: 22px;
+}
+.lanes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 56px);
+}
+@media (max-width: 760px) {
+  .lanes {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+}
+.lane-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 18px;
+  margin-bottom: 10px;
+}
+.lane-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.lane-name .key {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+.lane-tag {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.lane-counters {
+  display: flex;
+  gap: 18px;
+}
+.lane-counters span {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.lane-counters b {
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--ink);
+}
+.lane-counters small {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.lane-row {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.lane-row-label {
+  font: 500 10.5px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.cells {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: clamp(4px, 0.5vw, 8px);
+  position: relative;
+}
+.cells-more {
+  position: absolute;
+  right: 0;
+  top: -18px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.cell {
+  --lane: var(--ink-2);
+  display: grid;
+  place-items: center;
+  height: clamp(26px, 2.6vw, 42px);
+  border-radius: 6px;
+  border: 1.5px solid var(--axis);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  font: 700 14px var(--mono);
+  color: transparent;
+  transition: background 0.18s, border-color 0.18s;
+}
+.lane .cell {
+  --lane: inherit;
+}
+.cell.healthy,
+.cell.provisioned {
+  background: var(--lane);
+  border-color: var(--lane);
+}
+.cell.booting,
+.cell.provisioning {
+  border: 1.5px dashed var(--lane);
+  background: color-mix(in srgb, var(--lane) 14%, transparent);
+  animation: pulse 1.3s ease-in-out infinite;
+}
+.cell.warm {
+  border-color: color-mix(in srgb, var(--lane) 85%, transparent);
+  background: color-mix(in srgb, var(--lane) 26%, transparent);
+}
+.cell.over {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: var(--on-fill);
+}
+.cell.saturated,
+.cell.cold {
+  background: var(--crit);
+  border-color: var(--crit);
+  color: #fff;
+}
+.cell.cold {
+  animation: flash 0.9s ease-out;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+@keyframes flash {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--crit) 70%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell.booting,
+  .cell.provisioning,
+  .cell.cold {
+    animation: none;
+  }
+}
+.narration {
+  margin: 10px 0 0;
+  min-height: 4.4em;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.cell-key {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.cell-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.cell.mini {
+  --lane: var(--ink-2);
+  width: 18px;
+  height: 14px;
+  border-radius: 4px;
+  font-size: 10px;
+  animation: none;
+}
+
+/* ---------- result line ---------- */
+.outcome {
+  margin: 18px 0 0;
+  padding: 2px 0 2px 14px;
+  min-height: 3.2em;
+  max-width: 100ch;
+  border-left: 2px solid var(--axis);
+  color: var(--ink-3);
+  font-size: 14.5px;
+}
+.outcome.done {
+  border-left-color: var(--ink);
+  color: var(--ink-2);
+}
+.outcome b {
   color: var(--ink);
 }

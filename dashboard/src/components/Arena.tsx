@@ -3,10 +3,14 @@ import type { DashboardData, Episode, LambdaEpisode } from "../data/types";
 import { usePlayer } from "../hooks/usePlayer";
 import { buildEpisodeView, episodeTabs, nextWindowOutlook, totalFaults, type EpisodeView } from "../lib/episode";
 import { clockLabel, formatInt, formatPct, withUnit } from "../lib/format";
+import { outcomeLine } from "../lib/lanes";
 import { ArenaChart } from "./ArenaChart";
 import { FaultStrips } from "./FaultStrips";
+import { HowToRead } from "./HowToRead";
+import { Lanes } from "./Lanes";
 import { PlayerDock } from "./PlayerDock";
 import { Section } from "./Section";
+import { Term } from "./Term";
 
 /** Optional URL parameters for screenshots and links: ?ep=<episode id>&t=<minute>&still=1 (no autoplay). */
 function viewParams(): { ep: string | null; t: number; still: boolean } {
@@ -158,6 +162,8 @@ function Stage({ episode, data, onReadout }: StageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const delays = data.meta.delays_minutes;
+  const readyDelay = episode.kind === "ec2" ? delays.instance : delays.provisioned_concurrency;
   const outlook = nextWindowOutlook(view, player.now);
   const needNow = episode.need[player.now] ?? 0;
   useEffect(() => {
@@ -194,7 +200,17 @@ function Stage({ episode, data, onReadout }: StageProps) {
       <Legend view={view} />
       <ArenaChart view={view} now={player.now} onScrub={(minute) => { player.pause(); player.seek(minute); }} />
       <FaultStrips view={view} now={player.now} />
+      <Lanes view={view} now={player.now} readyDelayMinutes={readyDelay} />
       <PlayerDock player={player} start={episode.start} minutes={episode.minutes} marks={marks} />
+      <p className={`outcome${player.atEnd ? " done" : ""}`} aria-live="polite">
+        {player.atEnd ? (
+          <>
+            <b>Result.</b> {outcomeLine(view, readyDelay)}
+          </>
+        ) : (
+          "The result appears here when the replay reaches its end."
+        )}
+      </p>
       <ContextLine view={view} data={data} />
       <TableView view={view} />
     </div>
@@ -229,9 +245,14 @@ export function Arena({ data }: { data: DashboardData }) {
         ))}
       </div>
       {activeTab?.watching && <p className="watching">{activeTab.watching}</p>}
+      <HowToRead episode={active} instanceMinutes={data.meta.delays_minutes.instance} provisionedMinutes={data.meta.delays_minutes.provisioned_concurrency} />
       <Stage key={active.id} episode={active} data={data} onReadout={setReadout} />
       <p className="caption">
-        A replay of recorded model output on synthetic traffic, using the instance and container delays measured on AWS (section 03). Not a live system. The shaded fan is the model's forecast for the next 15 minutes: its middle guess as a dotted line, and the range between its 10th and 90th percentiles.
+        A replay of recorded model output on synthetic traffic, using the instance and container delays measured on AWS (section 03). Not a live system. The shaded fan is the model's forecast for the next 15 minutes: its middle guess as a dotted line, and the range between its 10th and 90th{" "}
+        <Term def="The 10th percentile is a value the real number should fall below only about 1 time in 10; the 90th, about 9 times in 10. Between them sits the range the model expects the real value to land in about 8 times out of 10.">
+          percentiles
+        </Term>
+        .
       </p>
     </Section>
   );
