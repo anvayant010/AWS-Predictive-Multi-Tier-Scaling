@@ -1,5 +1,6 @@
 import { Arena } from "./components/Arena";
-import { AwsPlaceholder, ComparisonPlaceholder } from "./components/Placeholders";
+import { ComparisonLedger } from "./components/Comparison";
+import { AwsPanel } from "./components/AwsPanel";
 import { Footer } from "./components/Footer";
 import { Hero } from "./components/Hero";
 import { Section } from "./components/Section";
@@ -28,7 +29,7 @@ export default function App() {
         )}
         {state.status === "ready" && (
           <>
-            <Hero comparison={state.data.comparison} />
+            <Hero comparison={state.data.comparison} aws={state.data.aws} meta={state.data.meta} />
             <Arena data={state.data} />
             <Section
               id="versus"
@@ -36,7 +37,7 @@ export default function App() {
               title="Against the reactive baseline"
               note="Same traffic, same AWS delays, same one-minute metric lag for every approach. Dots are medians; whiskers span the seeds."
             >
-              <ComparisonPlaceholder data={state.data} />
+              <ComparisonLedger comparison={state.data.comparison} accuracy={state.data.accuracy} provisionedMinutes={state.data.meta.delays_minutes.provisioned_concurrency} />
             </Section>
             <Section
               id="measured"
@@ -44,7 +45,7 @@ export default function App() {
               title="What the clock really looks like"
               note="Not simulated: measured on a deployed stack. These are the delays the replay uses."
             >
-              <AwsPlaceholder data={state.data} />
+              <AwsPanel data={state.data} />
             </Section>
             <Footer meta={state.data.meta} />
           </>

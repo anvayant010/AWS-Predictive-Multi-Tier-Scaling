@@ -1,6 +1,6 @@
 import type { ArmView, EpisodeView } from "../lib/episode";
 import { faultsSoFar } from "../lib/episode";
-import { PLOT_LEFT, PLOT_RIGHT } from "./ArenaChart";
+import { PLOT_LEFT, PLOT_RIGHT, rem } from "./ArenaChart";
 
 interface Props {
   view: EpisodeView;
@@ -16,13 +16,13 @@ function Strip({ arm, color, view, now }: { arm: ArmView; color: string; view: E
   const maxPerMinute = Math.max(1, ...arm.faults);
   return (
     <div className="strip">
-      <div className="strip-line" style={{ paddingLeft: PLOT_LEFT }}>
+      <div className="strip-line" style={{ paddingLeft: rem(PLOT_LEFT) }}>
         <i className="key" style={{ background: color }} aria-hidden="true" />
         <span>{arm.label}</span>
         <b>{total}</b>
         <span className="strip-noun">{noun}</span>
       </div>
-      <div className="strip-track" style={{ marginLeft: PLOT_LEFT, marginRight: PLOT_RIGHT }}>
+      <div className="strip-track" style={{ marginLeft: rem(PLOT_LEFT), marginRight: rem(PLOT_RIGHT) }}>
         {arm.faults.map((value, i) => {
           if (i > now || value <= 0) return null;
           const severe = (arm.saturated[i] ?? 0) > 0;
@@ -45,7 +45,7 @@ export function FaultStrips({ view, now }: Props) {
   return (
     <div className="strips" role="group" aria-label={heading}>
       <div className="strips-head">
-        <span className="kicker" style={{ marginLeft: PLOT_LEFT }}>
+        <span className="kicker" style={{ marginLeft: rem(PLOT_LEFT) }}>
           {heading}
         </span>
       </div>

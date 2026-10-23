@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { otherTheme, readStoredTheme, resolveTheme, storeTheme, type Theme } from "../lib/theme";
 
-const systemPrefersDark = (): boolean => window.matchMedia("(prefers-color-scheme: dark)").matches;
-
 export function useTheme(): { theme: Theme; toggle: () => void } {
-  const [theme, setTheme] = useState<Theme>(() => resolveTheme(readStoredTheme(), systemPrefersDark()));
+  const [theme, setTheme] = useState<Theme>(() => resolveTheme(readStoredTheme()));
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;

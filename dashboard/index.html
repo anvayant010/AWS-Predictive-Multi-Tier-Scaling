@@ -1,17 +1,16 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark light" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="description" content="Forecast-driven scaling for EC2 and Lambda, replayed against a reactive baseline." />
     <title>Predictive Scaling</title>
     <script>
       // Set the theme before first paint so a returning visitor never sees a flash of the wrong one.
       try {
         var stored = localStorage.getItem("theme");
-        var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        document.documentElement.dataset.theme = stored === "light" || stored === "dark" ? stored : dark ? "dark" : "light";
+        document.documentElement.dataset.theme = stored === "dark" ? "dark" : "light";
       } catch (e) {}
     </script>
   </head>

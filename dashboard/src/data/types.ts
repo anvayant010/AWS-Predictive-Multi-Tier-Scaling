@@ -70,7 +70,7 @@ export interface Spread {
   min: number;
   max: number;
 }
-/** metric name -> spread across seeds, per approach. */
+/** approach -> metric name -> spread across seeds. */
 export type ArmSpreads = Record<string, Record<string, Spread>>;
 export interface ComparisonRun {
   seeds: number;

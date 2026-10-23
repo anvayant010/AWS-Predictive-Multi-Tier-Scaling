@@ -83,8 +83,8 @@ function ContextLine({ view, data }: { view: EpisodeView; data: DashboardData })
       <b>This morning.</b> Minutes over the capacity plan: predictive {c.predictive.minutes_over_plan_here}, reactive {c.reactive_standard.minutes_over_plan_here}, a more
       aggressive reactive setting {c.reactive_aggressive.minutes_over_plan_here}.{" "}
       <b>Across this recorded week.</b> Predictive was over plan {formatPct(c.predictive.minutes_over_plan_week_pct)} of the time, reactive{" "}
-      {formatPct(c.reactive_standard.minutes_over_plan_week_pct)}
-      {week ? `, one seeded run; section 02 shows ${week.seeds}.` : "."}
+      {formatPct(c.reactive_standard.minutes_over_plan_week_pct)}.
+      {week ? ` That is one seeded run; section 02 shows the median and range of ${week.seeds}.` : ""}
     </p>
   );
 }

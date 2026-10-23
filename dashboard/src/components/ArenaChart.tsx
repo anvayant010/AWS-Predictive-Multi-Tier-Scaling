@@ -1,11 +1,13 @@
 import { memo, useMemo } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { chartRows, type ChartRow, type EpisodeView, yAxisTicks, yCeiling } from "../lib/episode";
+import { useRootScale } from "../hooks/useRootScale";
 import { clockLabel } from "../lib/format";
 
-/** Plot-area insets in px. The fault strips under the chart use the same numbers to line up with it. */
+/** Plot-area insets in px at the 16px base size; they grow with the page. The fault strips under the chart use the same numbers (as rem) to line up with it. */
 export const PLOT_LEFT = 46;
 export const PLOT_RIGHT = 12;
+export const rem = (px: number): string => `${px / 16}rem`;
 
 interface Props {
   view: EpisodeView;
@@ -42,12 +44,14 @@ function ArenaTooltip({ active, payload, view }: { active?: boolean; payload?: {
   );
 }
 
-function AskDot({ cx, cy, fill }: { cx?: number; cy?: number; fill: string }) {
+function AskDot({ cx, cy, fill, scale }: { cx?: number; cy?: number; fill: string; scale: number }) {
   if (cx === undefined || cy === undefined) return null;
-  return <circle cx={cx} cy={cy} r={5} fill={fill} stroke="var(--bg)" strokeWidth={2} />;
+  return <circle cx={cx} cy={cy} r={5 * scale} fill={fill} stroke="var(--bg)" strokeWidth={2} />;
 }
 
 function ArenaChartImpl({ view, now, onScrub }: Props) {
+  const scale = useRootScale();
+  const text = { fill: "var(--ink-3)", fontSize: 13 * scale, fontFamily: "var(--mono)" };
   const rows = useMemo(() => chartRows(view, now), [view, now]);
   const axis = useMemo(() => yAxisTicks(yCeiling(view)), [view]);
   const last = view.episode.minutes - 1;
@@ -63,7 +67,7 @@ function ArenaChartImpl({ view, now, onScrub }: Props) {
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={rows}
-          margin={{ top: 14, right: PLOT_RIGHT, bottom: 4, left: 0 }}
+          margin={{ top: 14 * scale, right: PLOT_RIGHT * scale, bottom: 4 * scale, left: 0 }}
           onClick={(state) => {
             const minute = Number(state?.activeLabel);
             if (Number.isFinite(minute)) onScrub(minute);
@@ -75,7 +79,7 @@ function ArenaChartImpl({ view, now, onScrub }: Props) {
             domain={[0, last]}
             ticks={ticks}
             tickFormatter={(m: number) => clockLabel(view.episode.start, m)}
-            tick={{ fill: "var(--ink-3)", fontSize: 11, fontFamily: "var(--mono)" }}
+            tick={text}
             axisLine={{ stroke: "var(--axis)" }}
             tickLine={false}
             allowDataOverflow
@@ -83,9 +87,9 @@ function ArenaChartImpl({ view, now, onScrub }: Props) {
           <YAxis
             domain={[0, axis.max]}
             ticks={axis.ticks}
-            width={PLOT_LEFT}
+            width={PLOT_LEFT * scale}
             allowDecimals={false}
-            tick={{ fill: "var(--ink-3)", fontSize: 11, fontFamily: "var(--mono)" }}
+            tick={text}
             axisLine={false}
             tickLine={false}
           />
@@ -108,10 +112,10 @@ function ArenaChartImpl({ view, now, onScrub }: Props) {
           <Line dataKey="need" type={view.faultKind === "over_plan" ? "monotone" : "stepAfter"} stroke="var(--actual)" strokeWidth={2} dot={false} isAnimationActive={false} connectNulls={false} />
 
           {/* the moments each system asked for more */}
-          <Line dataKey="reactiveAsk" stroke="none" dot={<AskDot fill="var(--reactive)" />} activeDot={false} isAnimationActive={false} connectNulls={false} legendType="none" />
-          <Line dataKey="predictiveAsk" stroke="none" dot={<AskDot fill="var(--predictive)" />} activeDot={false} isAnimationActive={false} connectNulls={false} legendType="none" />
+          <Line dataKey="reactiveAsk" stroke="none" dot={<AskDot fill="var(--reactive)" scale={scale} />} activeDot={false} isAnimationActive={false} connectNulls={false} legendType="none" />
+          <Line dataKey="predictiveAsk" stroke="none" dot={<AskDot fill="var(--predictive)" scale={scale} />} activeDot={false} isAnimationActive={false} connectNulls={false} legendType="none" />
 
-          <ReferenceLine x={now} stroke="var(--ink-2)" strokeWidth={1} label={{ value: "now", position: "insideTopRight", fill: "var(--ink-2)", fontSize: 11, fontFamily: "var(--mono)" }} />
+          <ReferenceLine x={now} stroke="var(--ink-2)" strokeWidth={1} label={{ value: "now", position: "insideTopRight", fill: "var(--ink-2)", fontSize: 13 * scale, fontFamily: "var(--mono)" }} />
           <Tooltip
             cursor={{ stroke: "var(--ink-3)", strokeWidth: 1 }}
             isAnimationActive={false}

@@ -1,0 +1,248 @@
+/* Section 02 accuracy strip and section 03: what was measured on real AWS. Amber is reserved for "measured". */
+
+/* ---------- accuracy strip ---------- */
+.acc-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.acc-grid {
+  list-style: none;
+  margin: 1.1rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1.5rem 2rem;
+}
+.acc-grid li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--axis);
+}
+.acc-v {
+  font-size: 1.9rem;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.acc-l {
+  font-size: 1rem;
+  color: var(--ink);
+}
+.acc-grid small {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+/* ---------- the measured band ---------- */
+.measured {
+  background: var(--bg-raise);
+  border-radius: 0.9rem;
+  padding: clamp(1.25rem, 2.4vw, 2.25rem);
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
+.measured-head {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--aws);
+}
+.awsmark {
+  display: inline-block;
+  flex: none;
+  width: 0.7rem;
+  height: 0.7rem;
+  background: var(--aws);
+  transform: rotate(45deg) scale(0.85);
+}
+
+.facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1.75rem 2rem;
+}
+.facts li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.facts b {
+  font-size: clamp(1.9rem, 2.4vw, 2.6rem);
+  font-weight: 500;
+  line-height: 1.05;
+  color: var(--aws);
+}
+.facts span {
+  font-size: 1rem;
+  color: var(--ink);
+}
+.facts small {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+/* ---------- delays against bursts ---------- */
+.delays h3,
+.split h3 {
+  margin: 0 0 0.9rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.delay-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 17rem) minmax(0, 1fr) 4.5rem;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.2rem 0;
+}
+.delay-label {
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.delay-track {
+  position: relative;
+  height: 1.7rem;
+}
+.delay-grid {
+  position: absolute;
+  top: 0.2rem;
+  bottom: 0.2rem;
+  width: 1px;
+  background: var(--grid);
+}
+.delay-bar {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 0.7rem;
+  margin-top: -0.35rem;
+  border-radius: 0 0.25rem 0.25rem 0;
+}
+.delay-row.aws .delay-bar {
+  background: var(--aws);
+}
+.delay-row.burst .delay-bar {
+  background: var(--ink-3);
+}
+.delay-value {
+  text-align: right;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.delay-row.axis {
+  padding: 0;
+}
+.delay-track.ticks {
+  height: 1.2rem;
+}
+.delay-track.ticks span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font: 400 0.75rem var(--mono);
+  color: var(--ink-3);
+}
+.delay-row.axis .delay-value {
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+.delay-key {
+  margin: 0.7rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.5rem;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+.delay-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.swatch {
+  display: inline-block;
+  width: 1.1rem;
+  height: 0.55rem;
+  border-radius: 0 0.2rem 0.2rem 0;
+}
+.swatch.aws {
+  background: var(--aws);
+}
+.swatch.burst {
+  background: var(--ink-3);
+}
+.delay-sentence {
+  margin: 0.9rem 0 0;
+  max-width: 62ch;
+  font-size: 1.05rem;
+  color: var(--ink-2);
+}
+
+/* ---------- real versus replayed ---------- */
+.split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.75rem 3rem;
+}
+.split ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.95rem;
+  color: var(--ink-2);
+}
+.split li {
+  padding: 0.3rem 0 0.3rem 0.9rem;
+  border-left: 2px solid var(--axis);
+  margin-bottom: 0.4rem;
+}
+.split section:first-child li {
+  border-left-color: var(--aws);
+}
+.measured-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+
+@media (max-width: 720px) {
+  .delay-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "label value" "track track";
+    gap: 0.15rem 0.75rem;
+    padding: 0.5rem 0;
+  }
+  .delay-row .delay-label {
+    grid-area: label;
+  }
+  .delay-row .delay-value {
+    grid-area: value;
+  }
+  .delay-row .delay-track {
+    grid-area: track;
+  }
+  .delay-row.axis {
+    grid-template-columns: 1fr;
+    grid-template-areas: "track";
+  }
+  .delay-row.axis > span {
+    display: none;
+  }
+}
