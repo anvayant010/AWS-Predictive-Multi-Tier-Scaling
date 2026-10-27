@@ -12,7 +12,6 @@ interface Props {
 export function Hero({ comparison, aws, meta }: Props) {
   const planRpm = meta.declared_rpm_per_instance * meta.plan_utilization;
   const startSeconds = Math.round(aws.instance_healthy_seconds / 10) * 10;
-  const coldSeconds = (aws.cold_start_penalty_ms / 1000).toFixed(1);
   const hero = comparison?.hero;
   const costs = comparison?.["0.7"]?.catalog_service;
   const rows: { label: string; arm: string; color: string; fade?: number }[] = [
@@ -27,18 +26,10 @@ export function Hero({ comparison, aws, meta }: Props) {
         Scaling <em>ahead</em> of demand, and what it actually buys.
       </h1>
       <p className="lede">
-        Cloud apps usually scale reactively: capacity is added after the traffic has already arrived, and new capacity takes time to start. This system
-        forecasts the next 15 minutes of demand and scales up before it is needed.
+        Cloud apps usually scale reactively: capacity is added after the traffic has already arrived, and new capacity takes time to start (a new server, about{" "}
+        {startSeconds} seconds). This system forecasts the next 15 minutes of demand and scales up before it is needed.
       </p>
       <div className="hero-more">
-        <p>
-          <b>Why it matters.</b> A new server takes about {startSeconds} seconds to start. A serverless function that has to start a fresh container makes that
-          one request wait (a{" "}
-          <Term def={`The first request to a brand-new container waits while it starts up. Measured on AWS for this project: about ${coldSeconds} seconds longer than a warm one.`}>
-            cold start
-          </Term>
-          ). A reactive system is always a few minutes behind a surge; one that sees it coming can start early.
-        </p>
         <p>
           <b>How it works.</b> A machine-learning model reads recent traffic and forecasts the next 15 minutes, as a likely value and a range. A decision engine,
           with hard safety limits, turns that into a request to AWS: more instances for a web service (EC2), and more containers kept ready ahead of time for a
@@ -49,10 +40,6 @@ export function Hero({ comparison, aws, meta }: Props) {
         <p>
           <b>What you are looking at.</b> A recorded week of traffic, replayed against a reactive baseline, using start-up delays measured on a real AWS deployment.
           The traffic is synthetic and nothing here runs live. Press play below, then see the whole-week comparison and the measurements.
-        </p>
-        <p>
-          <b>What it found.</b> For the web service, much more time inside its capacity plan than standard reactive scaling, at a similar cost. For the function,
-          no clear difference in cold starts.
         </p>
       </div>
       {hero && (

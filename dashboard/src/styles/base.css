@@ -154,7 +154,7 @@ button {
 
 /* ---------- hero ---------- */
 .hero {
-  padding-top: clamp(2.75rem, 8vw, 5.5rem);
+  padding-top: clamp(2rem, 5vw, 4rem);
 }
 .hero h1 {
   font: 600 clamp(2.125rem, 5.6vw, 4.25rem) / 1.04 var(--font);
