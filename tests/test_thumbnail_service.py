@@ -47,3 +47,64 @@ def test_lambda_handler_rejects_invalid_dimensions() -> None:
     assert response["statusCode"] == 400
     body = json.loads(response["body"])
     assert "error" in body
+
+
+# --- cold-start marker (Phase 7) -------------------------------------------------------------------------
+
+
+import demo_app.thumbnail_service.handler as handler_module  # noqa: E402
+
+
+@pytest.fixture
+def fresh_container(monkeypatch: pytest.MonkeyPatch):
+    """Pretend the module was just imported in a brand-new on-demand Lambda container."""
+    monkeypatch.setattr(handler_module, "_container_has_served", False)
+    monkeypatch.delenv("AWS_LAMBDA_INITIALIZATION_TYPE", raising=False)
+    return monkeypatch
+
+
+def _call() -> dict:
+    return json.loads(lambda_handler({"queryStringParameters": {"width": "8", "height": "8"}}, None)["body"])
+
+
+def test_first_request_of_a_new_container_is_cold_and_later_ones_are_warm(fresh_container) -> None:
+    first, second, third = _call(), _call(), _call()
+
+    assert (first["cold_start"], second["cold_start"], third["cold_start"]) == (True, False, False)
+
+
+def test_every_request_in_one_container_reports_the_same_container_id(fresh_container) -> None:
+    assert _call()["container_id"] == _call()["container_id"] == handler_module._CONTAINER_ID
+
+
+def test_a_new_container_gets_a_different_id() -> None:
+    import importlib
+
+    before = handler_module._CONTAINER_ID
+    reloaded = importlib.reload(handler_module)
+    try:
+        assert reloaded._CONTAINER_ID != before
+        assert reloaded._container_has_served is False  # a reloaded module is a fresh container
+    finally:
+        importlib.reload(handler_module)
+
+
+def test_provisioned_concurrency_containers_never_report_cold(fresh_container) -> None:
+    fresh_container.setenv("AWS_LAMBDA_INITIALIZATION_TYPE", "provisioned-concurrency")
+
+    body = _call()
+
+    assert body["cold_start"] is False and body["init_type"] == "provisioned-concurrency"
+
+
+def test_the_marker_is_on_error_responses_too(fresh_container) -> None:
+    response = lambda_handler({"queryStringParameters": {"width": "-1"}}, None)
+    body = json.loads(response["body"])
+
+    assert response["statusCode"] == 400 and body["cold_start"] is True and "container_id" in body
+
+
+def test_the_marker_does_not_change_the_thumbnail_itself(fresh_container) -> None:
+    body = _call()
+
+    assert body["thumbnail_hash"] == generate_thumbnail("unknown", 8, 8)["thumbnail_hash"]
