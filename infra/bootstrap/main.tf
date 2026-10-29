@@ -275,11 +275,28 @@ data "aws_iam_policy_document" "observability_and_state" {
       "logs:DescribeLogGroups",
       "logs:DescribeLogStreams",
       "logs:GetLogEvents",
+      # Needed for Terraform to manage the Lambda log group (infra/cloudwatch_logs.tf) so that
+      # `terraform destroy` removes it: set/clear retention, and read/write its tags.
+      "logs:PutRetentionPolicy",
+      "logs:DeleteRetentionPolicy",
+      "logs:TagResource",
+      "logs:UntagResource",
+      "logs:ListTagsForResource",
     ]
     resources = [
       "arn:${local.partition}:logs:${var.aws_region}:${local.account_id}:log-group:/aws/lambda/${var.project_name}-*",
       "arn:${local.partition}:logs:${var.aws_region}:${local.account_id}:log-group:/aws/lambda/${var.project_name}-*:*",
     ]
+  }
+
+  # The Terraform AWS provider reads a log group back via DescribeLogGroups, and IAM evaluates that
+  # call against this fixed, empty-name ARN (it does not support scoping to a name prefix — the
+  # AccessDenied message from the verifier showed this exact ARN). Read-only: it can list log
+  # group names/settings, not read any log contents.
+  statement {
+    sid       = "DescribeLogGroupsForTerraformRefresh"
+    actions   = ["logs:DescribeLogGroups"]
+    resources = ["arn:${local.partition}:logs:${var.aws_region}:${local.account_id}:log-group::log-stream:*"]
   }
 
   # App-level DynamoDB tables (e.g. the actuation kill switch), distinct

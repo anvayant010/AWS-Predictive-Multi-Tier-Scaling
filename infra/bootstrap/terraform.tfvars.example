@@ -1,0 +1,3 @@
+# Copy to terraform.tfvars (which is gitignored) and fill in. Never commit the real file.
+budget_alert_email = "you@example.com"
+# budget_limit_usd = 10

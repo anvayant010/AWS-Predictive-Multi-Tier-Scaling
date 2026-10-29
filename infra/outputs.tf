@@ -22,3 +22,18 @@ output "thumbnail_lambda_alias_name" {
   description = "Qualifier to use with put-provisioned-concurrency-config (provisioned concurrency can't target $LATEST)."
   value       = aws_lambda_alias.thumbnail_service_live.name
 }
+
+output "scaling_mode" {
+  description = "Which Phase 7 arm this stack was built as."
+  value       = var.scaling_mode
+}
+
+output "reactive_target_requests_per_instance_per_minute" {
+  description = "Target-tracking target in force (null unless a reactive mode)."
+  value       = local.reactive_target_value
+}
+
+output "catalog_target_group_arn" {
+  description = "Target group behind the ALB. The Phase 7 calibration polls its target health to time instance boot."
+  value       = aws_lb_target_group.catalog.arn
+}

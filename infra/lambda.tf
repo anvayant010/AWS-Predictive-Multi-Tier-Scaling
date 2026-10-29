@@ -19,6 +19,10 @@ resource "aws_lambda_function" "thumbnail_service" {
   # target for the "live" alias below — provisioned concurrency (Phase 6)
   # cannot be set on $LATEST, it needs a published version or an alias.
   publish = true
+
+  # Create the Terraform-managed log group first, or Lambda would auto-create it and the two
+  # would collide (see cloudwatch_logs.tf).
+  depends_on = [aws_cloudwatch_log_group.thumbnail_service]
 }
 
 resource "aws_lambda_alias" "thumbnail_service_live" {
