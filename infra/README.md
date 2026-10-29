@@ -23,6 +23,18 @@ terraform plan     # review before applying
 terraform apply
 ```
 
+## Initialising the main config
+
+`infra/backend.tf` deliberately leaves the state bucket name out (it contains your
+AWS account ID). Copy `backend.hcl.example` to `backend.hcl` (gitignored), put your
+bucket name in it, and pass it at init time:
+
+```bash
+cd infra
+cp backend.hcl.example backend.hcl    # then edit the bucket name
+terraform init -backend-config=backend.hcl
+```
+
 ## After apply: create the IAM user's access key
 
 The access key is deliberately **not** created by Terraform — its secret
