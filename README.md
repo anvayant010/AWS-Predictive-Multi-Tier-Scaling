@@ -2,6 +2,8 @@
 
 An ML-driven system that forecasts the next 15 minutes of traffic and **pre-scales two different AWS compute primitives before the load arrives**: an EC2 Auto Scaling Group for sustained load, and Lambda Provisioned Concurrency for bursty load. It is compared against reactive scaling in a replay, and the interactive dashboard in this repo lets you watch both systems handle the same traffic.
 
+**[Live demo: pre-scaling.netlify.app](https://pre-scaling.netlify.app/)**
+
 ![Dashboard hero](assets/screenshots/01-hero-light.png)
 
 > **Read this first.** The comparison is a **replay on synthetic traffic**, using start-up delays **measured on a real AWS deployment**. Nothing in the dashboard runs live. What was real on AWS and what was replayed is listed [below](#what-is-real-and-what-is-replayed).
