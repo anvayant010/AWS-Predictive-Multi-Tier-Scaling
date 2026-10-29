@@ -232,6 +232,8 @@ override.tf.json
 .terraform.tfstate.lock.info
 *.tfvars
 !*.tfvars.example
+# Partial backend config (holds the state bucket name, which includes the AWS account ID)
+backend.hcl
 tfplan
 *.tfplan
 
